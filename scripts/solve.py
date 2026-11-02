@@ -6,9 +6,33 @@ Usage: python3 solve.py spec.json [--outdir out]
 Prints a VALIDATION REPORT (what was read from the screenshot) and the probability
 map, and writes heatmap_fragment.html, heatmap.html and result.json to --outdir.
 Cell labels are 1-indexed: r<row>c<col>, e.g. r5c2 = row 5, column 2.
+Rectangles are allowed in cell lists: "r2c2:r3c7" = every cell from r2c2 to r3c7.
+Targets may give "size": [rows, cols] or "kind": one of KINDS below (size wins if both).
 """
 import argparse, json, os, re, sys
 from math import comb
+
+# Gem sizes confirmed by the user, as [rows, cols] (rotation is handled by the solver).
+KINDS = {"diamond": (1, 1), "tall": (3, 1), "flat": (1, 2), "hex": (3, 2), "octagon": (3, 3)}
+
+def target_size(t):
+    if "size" in t:
+        return tuple(t["size"])
+    k = str(t.get("kind", "")).lower()
+    if k not in KINDS:
+        sys.exit(f"Target {t.get('name')!r} needs a size or a kind in {sorted(KINDS)}")
+    return KINDS[k]
+
+def expand_cells(items, rows, cols):
+    out = set()
+    for it in items:
+        if ":" in str(it):
+            a, b = str(it).split(":", 1)
+            (r1, c1), (r2, c2) = parse_cell(a, rows, cols), parse_cell(b, rows, cols)
+            out |= {(r, c) for r in range(min(r1, r2), max(r1, r2) + 1) for c in range(min(c1, c2), max(c1, c2) + 1)}
+        else:
+            out.add(parse_cell(it, rows, cols))
+    return out
 
 def parse_cell(s, rows, cols):
     m = re.fullmatch(r"r(\d+)c(\d+)", str(s).strip().lower())
@@ -36,8 +60,8 @@ def placements(h, w, rows, cols, rotate, blocked):
 def solve(spec):
     rows, cols = spec["rows"], spec["cols"]
     rotate = spec.get("allow_rotation", True)
-    dug = {parse_cell(s, rows, cols) for s in spec.get("dug", [])}
-    hits = {parse_cell(s, rows, cols) for s in spec.get("hits", [])}
+    dug = expand_cells(spec.get("dug", []), rows, cols)
+    hits = expand_cells(spec.get("hits", []), rows, cols)
     if dug & hits:
         sys.exit(f"Cells listed as both dug and hit: {sorted(dug & hits)}")
     bit = lambda rc: 1 << (rc[0] * cols + rc[1])
@@ -46,12 +70,12 @@ def solve(spec):
     free_mask = ((1 << (rows * cols)) - 1) & ~blocked
 
     targets = spec["targets"]
-    k = sum(1 for t in targets if tuple(t["size"]) == (1, 1))
+    k = sum(1 for t in targets if target_size(t) == (1, 1))
     groups = {}
     for t in targets:
-        if tuple(t["size"]) == (1, 1):
+        if target_size(t) == (1, 1):
             continue
-        key = tuple(sorted(t["size"])) if rotate else tuple(t["size"])
+        key = tuple(sorted(target_size(t))) if rotate else target_size(t)
         groups.setdefault(key, []).append(t)
     slots = []
     for key, ts in groups.items():
@@ -126,12 +150,19 @@ def report(spec, prob, layouts, dug, hits):
     L.append("Targets counted:")
     cells_total = 0
     for i, t in enumerate(spec["targets"], 1):
-        a, b = t["size"]
+        a, b = target_size(t)
         cells_total += a * b
         L.append(f"  {i}. {t['name']}: {a}x{b}" + (f"  [{t['source']}]" if t.get("source") else ""))
     L.append(f"  -> {len(spec['targets'])} targets, {cells_total} target cells")
     for e in spec.get("excluded", []):
         L.append(f"Excluded: {e['name']} ({e.get('reason', 'no reason given')})")
+    fg = spec.get("found_gems", [])
+    if fg:
+        fcells = sum(target_size(g)[0] * target_size(g)[1] for g in fg)
+        empt = len(dug) - fcells
+        L.append(f"Found gems ({len(fg)}): " + ", ".join(g["name"] for g in fg) + f" = {fcells} cells")
+        L.append(f"Black cells {len(dug)} - found-gem cells {fcells} = {empt} empty digs"
+                 + ("  <-- NEGATIVE: black cells misread or a found gem is mis-sized" if empt < 0 else ""))
     L.append(f"Rules: uniform random placement, rotation {'allowed' if spec.get('allow_rotation', True) else 'NOT allowed'}, touching allowed")
     L.append(f"Layouts counted (weighted): {layouts:,}")
     L.append("")
@@ -155,15 +186,26 @@ def report(spec, prob, layouts, dug, hits):
     return "\n".join(L), cand
 
 def fragment(spec, prob, dug, hits, cand):
+    """Heatmap HTML. Design rules learned from the user (keep them):
+    - solid cell colours (no rgba on a transparent page) and text colour chosen by luminance,
+      because mid-blue cells with fixed white/dark text were unreadable;
+    - colour scale capped at the 90th percentile so one outlier (e.g. a 94% cell) does not wash out the rest;
+    - every tied-best cell gets the solid outline, near ties (<0.5 pt) a dashed one;
+    - dug/black cells are blank neutral, revealed gem cells amber with 'gem'."""
     rows, cols = spec["rows"], spec["cols"]
-    vals = [p for rc, p in prob.items() if rc not in hits]
-    lo_v, hi_v = (min(vals), max(vals)) if vals else (0, 1)
-    span = max(hi_v - lo_v, 1e-9)
-    lo, hi = (207, 225, 247), (24, 95, 180)
+    vals = sorted(p for rc, p in prob.items() if rc not in hits)
+    lo_v = vals[0] if vals else 0.0
+    hi_v = vals[min(len(vals) - 1, int(0.9 * len(vals)))] if vals else 1.0
+    if hi_v - lo_v < 1e-9:
+        hi_v = lo_v + 1e-9
+    span = hi_v - lo_v
+    lo, hi = (230, 241, 251), (12, 68, 124)
     best = cand[0][1] if cand else None
-    near = {rc for p, rc in cand[1:] if cand[0][0] - p < 0.005}
-    cell = "aspect-ratio:1;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font:500 14px system-ui,sans-serif;box-sizing:border-box;"
+    tied = {rc for p, rc in cand if cand[0][0] - p < 0.0005}
+    near = {rc for p, rc in cand if 0.0005 <= cand[0][0] - p < 0.005}
+    base = "aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"
     muted = "font:12px system-ui,sans-serif;color:var(--text-muted,#898781);text-align:center;"
+    fs = 15 if cols <= 7 else 13
     h = [f'<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Heatmap of hit probability on a {rows} by {cols} board; best square {lab(best) if best else "none"}.</h2>',
          '<div style="padding:.5rem 0;">',
          f'<div style="display:grid;grid-template-columns:18px repeat({cols},minmax(0,1fr));gap:3px;align-items:center;">',
@@ -173,22 +215,23 @@ def fragment(spec, prob, dug, hits, cand):
         for c in range(cols):
             rc = (r, c)
             if rc in dug:
-                h.append(f'<div style="{cell}background:#3a3a37;color:#c3c2b7;font-size:11px;font-weight:400;">dug</div>')
+                h.append(f'<div style="{base}background:var(--surface-1,#e9e8e3);border:0.5px solid var(--border,#b9b8b0);"></div>')
             elif rc in hits:
-                h.append(f'<div style="{cell}background:#1baf7a;color:#04342C;">hit</div>')
+                h.append(f'<div style="{base}font:500 12px system-ui,sans-serif;background:#EF9F27;color:#412402;">gem</div>')
             else:
-                t = (prob[rc] - lo_v) / span
-                col = ",".join(str(round(a + (b - a) * t)) for a, b in zip(lo, hi))
-                fg = "#fff" if t > .5 else "#042C53"
+                t = min(1.0, max(0.0, (prob[rc] - lo_v) / span))
+                rgb = [round(x + (y - x) * t) for x, y in zip(lo, hi)]
+                lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255
+                fg = "#042C53" if lum > 0.62 else "#FFFFFF"
                 extra = ""
-                if rc == best:
-                    extra = "outline:3px solid #eb6834;outline-offset:-1px;"
+                if rc in tied:
+                    extra = "outline:3px solid #EF9F27;outline-offset:-3px;"
                 elif rc in near:
-                    extra = "outline:2px dashed #eb6834;outline-offset:-1px;"
-                h.append(f'<div style="{cell}background:rgb({col});color:{fg};{extra}">{100*prob[rc]:.0f}%</div>')
+                    extra = "outline:2px dashed #EF9F27;outline-offset:-2px;"
+                h.append(f'<div style="{base}font:500 {fs}px system-ui,sans-serif;background:rgb({",".join(map(str, rgb))});color:{fg};{extra}">{100*prob[rc]:.0f}%</div>')
     h.append("</div>")
-    h.append(f'<div style="display:flex;align-items:center;gap:8px;margin-top:14px;font:12px system-ui,sans-serif;color:var(--text-secondary,#52514e);"><span>{100*lo_v:.0f}%</span><div style="flex:1;height:10px;border-radius:2px;background:linear-gradient(to right,rgb{lo},rgb{hi});"></div><span>{100*hi_v:.0f}%</span></div>')
-    h.append('<div style="display:flex;gap:14px;margin-top:10px;font:12px system-ui,sans-serif;color:var(--text-secondary,#52514e);"><span>Solid orange outline: best guess</span><span>Dashed: near tie</span></div>')
+    h.append(f'<div style="display:flex;align-items:center;gap:8px;margin-top:14px;font:12px system-ui,sans-serif;color:var(--text-secondary,#52514e);"><span>{100*lo_v:.0f}%</span><div style="flex:1;height:10px;border-radius:2px;background:linear-gradient(to right,rgb{lo},rgb{hi});"></div><span>{100*hi_v:.0f}%+</span></div>')
+    h.append('<div style="margin-top:8px;font:12px system-ui,sans-serif;color:var(--text-secondary,#52514e);">Solid orange outline: best (all tied cells). Dashed: within 0.5 pt. Blank gray: dug or found. Amber: revealed gem part.</div>')
     h.append("</div>")
     return "\n".join(h)
 

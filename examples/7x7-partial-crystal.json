@@ -1,0 +1,8 @@
+{"_note":"Octagon + flat found; two cells of a tall crystal revealed (r3c6,r4c6, r2c6 empty) so r5c6 ~94%.",
+"rows":7,"cols":7,
+"dug":["r3c3:r5c5","r2c2:r3c2","r2c6","r6c2","r6c6"],"hits":["r3c6","r4c6"],
+"targets":[
+{"name":"diamond top","kind":"diamond"},{"name":"diamond left","kind":"diamond"},{"name":"diamond right","kind":"diamond"},
+{"name":"tall left","kind":"tall"},{"name":"tall right","kind":"tall"}],
+"found_gems":[{"name":"octagon","kind":"octagon"},{"name":"flat","kind":"flat"}],
+"allow_rotation":true}

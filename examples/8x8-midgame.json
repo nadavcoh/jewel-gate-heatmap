@@ -1,0 +1,8 @@
+{"_note":"8x8 round, octagon+2 hex+flat top+diamond NW found. Expect best r7c4 at 18.42%.",
+"rows":8,"cols":8,
+"dug":["r1c2:r1c4","r2c2:r3c7","r4c5:r4c7","r5c2","r5c4","r5c6:r7c7","r6c3","r7c2"],"hits":[],
+"targets":[
+{"name":"diamond NE","kind":"diamond"},{"name":"diamond SW","kind":"diamond"},{"name":"diamond SE","kind":"diamond"},
+{"name":"flat bottom","kind":"flat"}],
+"found_gems":[{"name":"octagon","kind":"octagon"},{"name":"hex left","kind":"hex"},{"name":"hex right","kind":"hex"},{"name":"flat top","kind":"flat"},{"name":"diamond NW","kind":"diamond"}],
+"allow_rotation":true}
