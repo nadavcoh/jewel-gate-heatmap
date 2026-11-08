@@ -4,24 +4,49 @@
 Usage: python3 solve.py spec.json [--outdir out]
 
 Prints a VALIDATION REPORT (what was read from the screenshot) and the probability
-map, and writes heatmap_fragment.html, heatmap.html and result.json to --outdir.
+map, and writes heatmap_compact.html (use this one inline), heatmap_fragment.html, heatmap.html and result.json to --outdir.
 Cell labels are 1-indexed: r<row>c<col>, e.g. r5c2 = row 5, column 2.
 Rectangles are allowed in cell lists: "r2c2:r3c7" = every cell from r2c2 to r3c7.
-Targets may give "size": [rows, cols] or "kind": one of KINDS below (size wins if both).
+Every target needs an explicit "size": [rows, cols]. There are NO standard gem sizes: sizes differ
+per level (see levels/levels.json). Instead of typing targets, a spec may say {"level": 3} and list what
+was already found with "found": ["octagon", "diamond"] (sprite classes); the solver then fills rows, cols,
+targets and found_gems from levels/levels.json. Explicit "targets" always win over the level table.
 """
 import argparse, json, os, re, sys
 from math import comb
 
-# Gem sizes confirmed by the user, as [rows, cols] (rotation is handled by the solver).
-KINDS = {"diamond": (1, 1), "tall": (3, 1), "flat": (1, 2), "hex": (3, 2), "octagon": (3, 3)}
+LEVELS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "levels", "levels.json")
+
+def load_levels():
+    return json.load(open(LEVELS_PATH))["levels"]
 
 def target_size(t):
-    if "size" in t:
-        return tuple(t["size"])
-    k = str(t.get("kind", "")).lower()
-    if k not in KINDS:
-        sys.exit(f"Target {t.get('name')!r} needs a size or a kind in {sorted(KINDS)}")
-    return KINDS[k]
+    if "size" not in t:
+        sys.exit(f"Target {t.get('name')!r} needs \"size\": [rows, cols]. There are no standard gem sizes; "
+                 "take them from levels/levels.json or ask the user.")
+    return tuple(t["size"])
+
+def apply_level(spec):
+    """Fill rows/cols/targets/found_gems from the level table when spec has \"level\" and no explicit targets."""
+    if "level" not in spec:
+        return spec
+    lv = next((l for l in load_levels() if l["level"] == int(spec["level"])), None)
+    if lv is None:
+        sys.exit(f"Unknown level {spec['level']!r}; levels are 1-{len(load_levels())}")
+    spec.setdefault("rows", lv["rows"])
+    spec.setdefault("cols", lv["cols"])
+    if "targets" not in spec:
+        pool = [dict(name=f"{g['class']} {i+1}", **{"class": g["class"], "size": g["size"]})
+                for g in lv["gems"] for i in range(g["count"])]
+        found = []
+        for cls in spec.get("found", []):
+            i = next((i for i, g in enumerate(pool) if g["class"] == cls), None)
+            if i is None:
+                sys.exit(f"'found' lists {cls!r} but level {lv['level']} has no unfound {cls} left")
+            found.append(pool.pop(i))
+        spec["targets"] = pool
+        spec.setdefault("found_gems", found)
+    return spec
 
 def expand_cells(items, rows, cols):
     out = set()
@@ -235,18 +260,60 @@ def fragment(spec, prob, dug, hits, cand):
     h.append("</div>")
     return "\n".join(h)
 
+def compact(spec, prob, dug, hits, cand, title=""):
+    """Small JS-driven widget (about 2-3 KB) for the inline visual tool. Prefer it over heatmap_fragment.html:
+    the fragment is ~16 KB of repeated inline styles that must be pasted into the tool call in full."""
+    rows, cols = spec["rows"], spec["cols"]
+    vals = sorted(p for rc, p in prob.items() if rc not in hits)
+    lo = vals[0] if vals else 0.0
+    hi = vals[min(len(vals) - 1, int(0.9 * len(vals)))] if vals else 1.0
+    if hi - lo < 1e-9:
+        hi = lo + 1e-9
+    tied = {rc for p, rc in cand if cand[0][0] - p < 0.0005}
+    near = {rc for p, rc in cand if 0.0005 <= cand[0][0] - p < 0.005}
+    grid = []
+    for r in range(rows):
+        row = []
+        for c in range(cols):
+            rc = (r, c)
+            row.append(-1 if rc in dug else -2 if rc in hits else round(100 * prob[rc]))
+        grid.append(row)
+    best = [[r, c] for r, c in sorted(tied)]
+    nr = [[r, c] for r, c in sorted(near)]
+    js = ("const G=%s,B=%s,N=%s,lo=%.1f,hi=%.1f;" % (json.dumps(grid, separators=(",", ":")), json.dumps(best, separators=(",", ":")),
+          json.dumps(nr, separators=(",", ":")), 100 * lo, 100 * hi))
+    return (
+        f'<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Heatmap of gem probability on a {rows} by {cols} board; best {", ".join(lab(rc) for rc in sorted(tied))}.</h2>'
+        + (f'<div style="font:500 14px system-ui,sans-serif;color:var(--text-primary);margin:6px 0;">{title}</div>' if title else "")
+        + '<div id="w"></div><div style="margin-top:10px;font:12px system-ui,sans-serif;color:var(--text-secondary);">Solid orange outline: best squares. Dashed: within 0.5 points. Blank: dug or found. Amber: revealed gem part. Darker blue = more likely.</div>'
+        + "<script>" + js +
+        "const L=t=>'<div style=\"font:12px system-ui,sans-serif;color:var(--text-muted);text-align:center;\">'+t+'</div>';"
+        "const n=G[0].length,fs=n>7?12:n>6?13:15,has=(a,r,c)=>a.some(x=>x[0]==r&&x[1]==c);"
+        "let h='<div style=\"display:grid;grid-template-columns:18px repeat('+n+',minmax(0,1fr));gap:3px;align-items:center;\">'+L('');"
+        "for(let c=1;c<=n;c++)h+=L('c'+c);"
+        "G.forEach((row,r)=>{h+=L('r'+(r+1));row.forEach((v,c)=>{"
+        "const b='aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;';"
+        "if(v==-1){h+='<div style=\"'+b+'background:var(--surface-1);border:0.5px solid var(--border);\"></div>';return;}"
+        "if(v==-2){h+='<div style=\"'+b+'font:500 12px system-ui,sans-serif;background:#EF9F27;color:#412402;\">gem</div>';return;}"
+        "const t=Math.min(1,Math.max(0,(v-lo)/(hi-lo))),R=Math.round(230-218*t),Gc=Math.round(241-173*t),Bc=Math.round(251-127*t);"
+        "const lum=(0.299*R+0.587*Gc+0.114*Bc)/255,o=has(B,r,c)?'outline:3px solid #EF9F27;outline-offset:-3px;':has(N,r,c)?'outline:2px dashed #EF9F27;outline-offset:-2px;':'';"
+        "h+='<div style=\"'+b+'font:500 '+fs+'px system-ui,sans-serif;background:rgb('+R+','+Gc+','+Bc+');color:'+(lum>0.62?'#042C53':'#FFFFFF')+';'+o+'\">'+v+'%</div>';});});"
+        "document.getElementById('w').innerHTML=h+'</div>';"
+        "</script>")
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("spec")
     ap.add_argument("--outdir", default="heatmap_out")
     a = ap.parse_args()
-    spec = json.load(open(a.spec))
+    spec = apply_level(json.load(open(a.spec)))
     prob, layouts, dug, hits = solve(spec)
     text, cand = report(spec, prob, layouts, dug, hits)
     print(text)
     frag = fragment(spec, prob, dug, hits, cand)
     os.makedirs(a.outdir, exist_ok=True)
     open(os.path.join(a.outdir, "heatmap_fragment.html"), "w").write(frag)
+    open(os.path.join(a.outdir, "heatmap_compact.html"), "w").write(compact(spec, prob, dug, hits, cand))
     page = ('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             '<style>body{margin:0 auto;max-width:480px;padding:16px;font-family:system-ui,sans-serif;background:#fff;color:#0b0b0b}'
             '@media(prefers-color-scheme:dark){body{background:#1a1a19;color:#f0efec}}</style>' + frag)
