@@ -1,0 +1,4 @@
+{"_note":"Level 5 (8x8), octagon + 2 hexagons + 1 flat + 1 diamond found. Expect best r7c4 at 18.42%.",
+ "level":5,
+ "dug":["r1c2:r1c4","r2c2:r3c7","r4c5:r4c7","r5c2","r5c4","r5c6:r7c7","r6c3","r7c2"],"hits":[],
+ "found":["octagon","hex","hex","flat","diamond"]}

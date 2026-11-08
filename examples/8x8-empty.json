@@ -1,7 +1,0 @@
-{"_note":"8x8 round, nothing dug. Expect best r3c3/r3c6/r6c3/r6c6 at 59.21%.",
-"rows":8,"cols":8,"dug":[],"hits":[],
-"targets":[
-{"name":"diamond NW","kind":"diamond"},{"name":"diamond NE","kind":"diamond"},{"name":"diamond SW","kind":"diamond"},{"name":"diamond SE","kind":"diamond"},
-{"name":"flat top","kind":"flat"},{"name":"flat bottom","kind":"flat"},
-{"name":"hex left","kind":"hex"},{"name":"hex right","kind":"hex"},{"name":"octagon","kind":"octagon"}],
-"allow_rotation":true}

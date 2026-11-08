@@ -1,0 +1,4 @@
+{"_note":"Explicit targets without the level table (use when a new board or gem set appears). Level 1 gem set; expect best r2c2/r2c3/r3c2/r3c3 at 72.87%.",
+ "rows":4,"cols":4,"dug":[],"hits":[],
+ "targets":[{"name":"octagon","size":[2,2]},{"name":"tall 1","size":[2,1]},{"name":"tall 2","size":[2,1]},{"name":"diamond 1","size":[1,1]},{"name":"diamond 2","size":[1,1]}],
+ "found_gems":[],"allow_rotation":true}

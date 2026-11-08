@@ -1,0 +1,2 @@
+{"_note":"Level 4 (7x7), octagon + flat found; two cells of a tall crystal revealed (r3c6,r4c6; r2c6 empty) so r5c6 is ~94%.",
+ "level":4,"dug":["r3c3:r5c5","r2c2:r3c2","r2c6","r6c2","r6c6"],"hits":["r3c6","r4c6"],"found":["octagon","flat"]}
