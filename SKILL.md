@@ -1,71 +1,72 @@
 ---
 name: jewel-gate-heatmap
-description: Turn a screenshot of a Battleship-style dig/mining grid game (hidden gems under a grid, e.g. the "Jewel Gate" event with a pickaxe counter and a gem gate at the top) into an exact probability heatmap that marks the best square to dig next. Prints the board and the targets it read, so the user can validate them first. Use this whenever the user shares a screenshot of such a grid (or types "jewel gate heatmap") and asks where to dig, which square is best, for a probability map or heatmap, or to update the map after more squares were revealed or a new round started, even if they never say "heatmap".
+description: Turn Jewel Gate screenshots (Battleship-style dig grid with hidden gems, pickaxe counter and a check-mark progress bar) into exact probability heatmaps that mark the best square to dig next, or answer "map for level N" from the stored blank-board data without a screenshot. Five levels are stored (4x4 to 8x8) with their gem definitions and sizes. Use whenever the user shares Jewel Gate screenshots, types "jewel gate heatmap", asks where to dig, which square is best, for a level's gem list or blank heatmap, or sends a new screenshot after digging, even if they never say "heatmap".
 ---
 
 # Jewel Gate heatmap
 
-Compute the exact chance that each unrevealed square hides part of a gem, then show it as a heatmap with the best square marked. Reading the screenshot is the error-prone step (a wrong grid size, gem size or hidden/found state silently gives a wrong map), so always state what you read and let the user correct it. Read `references/screenshot-reading.md` first; it holds the confirmed gem sizes, colour meanings and pixel geometry, which saves most of the guesswork.
+Compute the exact chance that each unrevealed square hides part of a gem and show it as a heatmap with the best square(s) marked. Reading the screenshot is the error-prone step (wrong grid size, gem size or hidden/found state silently gives a wrong map), so state what you read, in tables with sizes, and let the user correct it. Paths below are relative to this skill's folder. Read `references/lessons.md` once: it lists what the user already corrected so you do not repeat it.
 
-## Workflow
+## Levels (stored in `levels/levels.json`)
 
-1. **Read the screenshot** (`references/screenshot-reading.md`): board size, black cells, revealed gem parts, and the gems in the artwork with their state (purple = hidden, any other colour = found).
-2. **Write a spec** (below) and **run** `python3 scripts/solve.py spec.json --outdir out`. Paths are relative to this skill's folder. It prints a validation report and the map, and writes `out/heatmap_fragment.html`, `out/heatmap.html`, `out/result.json`. `examples/*.json` are real boards from earlier sessions with their expected best squares; copy the closest one.
-3. **Check the report before replying**: the line `Black cells N - found-gem cells M = K empty digs` should be a small non-negative number, and the probabilities must sum to the number of hidden gem cells. A negative K or a "no consistent layout" error means a misread, so fix the spec instead of answering.
-4. **Show the heatmap**: pass `heatmap_fragment.html` to the inline visual tool if there is one (it needs `read_me` first on the visualize tool); otherwise present `heatmap.html`. The fragment already has the readability fixes below. If you hand-build a widget instead, follow the same design rules.
-5. **Reply short** (phone screen): what you read (board, found gems, still-hidden gems, rules), then the best square(s) with the unrounded percentage and ties, then one line asking the user to correct anything. Lead with the answer; the heatmap itself is not repeated in text. If the pickaxe count is 0, say the user needs pickaxes before digging.
+The game has five rounds. **Level = check marks in the progress bar + 1**, and the board grows with the level. Gem sizes are `rows x cols`, rotation always allowed. There are **no standard gem sizes**: the same crystal name has different sizes on different levels, so always write the size next to every gem and never reuse a size from another level.
 
-A new screenshot means a new full read: rebuild the spec from scratch and rerun, never reuse old numbers. Rounds change the board and gem set (see the reference).
+| Level | Board | Gems (count, class, size) | Cells | Blank-board best square(s) |
+|---|---|---|---|---|
+| 1 | 4x4 | 1 octagon 2x2, 2 tall 2x1, 2 diamond 1x1 | 10 | r2c2 r2c3 r3c2 r3c3, 72.87% |
+| 2 | 5x5 | 1 octagon 2x2, 2 tall 3x1, 1 flat 2x1, 1 diamond 1x1 | 13 | r3c3, 60.84% |
+| 3 | 6x6 | 1 octagon 2x2, 2 tall 2x1, 1 flat 1x3, 2 diamond 1x1 | 13 | r2c2 r2c5 r5c2 r5c5, 41.83% (12 cells within 0.5 pt, nearly flat) |
+| 4 | 7x7 | 1 octagon 3x3, 2 tall 3x1, 1 flat 2x1, 3 diamond 1x1 | 20 | r3c3 r3c5 r5c3 r5c5, 54.83% |
+| 5 | 8x8 | 1 octagon 3x3, 2 hex 2x3, 2 flat 2x1, 4 diamond 1x1 | 29 | r3c3 r3c6 r6c3 r6c6, 59.21% |
+
+`levels.json` also holds the full blank-board percentage matrix per level. For a board/gem set that is not in the table (a new level), ask the user for the sizes and add it to `levels.json`.
+
+## Workflow A: "map for level N" (no screenshot)
+
+Run `python3 scripts/level.py N --widget out.html`. Reply with the gem definition as a table (count, gem, size) and the heatmap: paste `out.html` into the inline visual tool (call its `read_me` first, `data_viz` module, mobile platform), or present it as a file. Say the best squares with percentages. `python3 scripts/level.py --list` gives one line per level.
+
+## Workflow B: screenshot(s)
+
+1. **Read every screenshot automatically**: `python3 scripts/read_board.py IMG.png` (one call per file, list file names explicitly, no brace expansion). It counts grid lines (board size), maps the board to a level, prints the grid of dug/hit cells, classifies the artwork sprites (purple = hidden, other colour = found), compares them with the level's gem table and prints a draft spec. **Check its grid and sprite lines by eye against the image**: dug/hit/found detection is verified only on blank boards.
+2. **Analyze all boards** the user sent unless they limit it (several screenshots = several levels; give one result per level, sorted by level, not just the newest). A new screenshot means a new full read: never reuse old numbers.
+3. **Write a spec** (below) and run `python3 scripts/solve.py spec.json --outdir out`. It prints a validation report with every target's size, the map, and writes `heatmap_compact.html`, `heatmap_fragment.html`, `heatmap.html`, `result.json`. `examples/*.json` are real boards with their expected best squares.
+4. **Check the report**: `Black cells N - found-gem cells M = K empty digs` should be a small non-negative number; probabilities must sum to the hidden gem cells. Negative K or "no consistent layout" = misread; fix the spec instead of answering.
+5. **Show it**: use `heatmap_compact.html` (about 2 KB, JS-driven) in the inline visual tool. `heatmap_fragment.html` is ~16 KB of repeated styles and is too long to paste; use it only if a full static fragment is needed. Several boards: one widget per board or one stacked widget with a title per board.
+6. **Verify widget on request** ("crop the gems so I can verify"): `python3 scripts/gem_crops.py IMG1 IMG2 ... --outdir out` builds `gem_crops_widget.html` (each crop inline beside its gem list with sizes) and `gems_all_boards.png`. Embed the widget inline; present the PNG only if a file is wanted. The user prefers inline, one crop next to one list.
+7. **Reply short** (phone): tables for gems with sizes and for best squares, the percentage unrounded, ties called ties, then one line asking the user to confirm. If pickaxes are 0 say they must earn some before digging. Do not repeat the heatmap in text.
 
 ## Spec format
 
+Level mode (preferred; the solver fills rows, cols, targets and found_gems from the level table):
+
 ```json
-{
-  "rows": 8, "cols": 8,
-  "dug": ["r1c2:r1c4", "r2c2:r3c7", "r5c2"],
-  "hits": ["r3c6", "r4c6"],
-  "targets": [
-    {"name": "diamond NE", "kind": "diamond", "source": "purple"},
-    {"name": "flat bottom", "kind": "flat"},
-    {"name": "odd gem", "size": [2, 4]}
-  ],
-  "found_gems": [{"name": "octagon", "kind": "octagon"}],
-  "excluded": [],
-  "allow_rotation": true
-}
+{"level": 5, "dug": ["r2c2:r3c7", "r5c2"], "hits": ["r3c6", "r4c6"], "found": ["octagon", "hex", "hex", "flat", "diamond"]}
 ```
 
-- Cells are 1-indexed `r<row>c<col>`, row 1 on top. `"r2c2:r3c7"` is a rectangle.
-- `dug`: **every solid-black cell**, whether it was an empty dig or belongs to a found gem. Both are unavailable for hidden gems.
-- `hits`: revealed gem cells of a gem that is **still hidden** (purple sprite visible on black). Probability 1; the solver infers where the rest of that gem is.
-- `targets`: only the **hidden (purple)** gems. `kind` is one of `diamond` 1x1, `tall` 3x1, `flat` 1x2, `hex` 3x2, `octagon` 3x3, or give `size` as `[rows, cols]`.
-- `found_gems`: the found gems (any non-purple colour). Used only for the consistency check on black cells; they are not solved for.
-- `excluded`: anything left out on purpose, with a reason, so the report shows it.
+`found` lists the **found gems' classes** (octagon, hex, tall, flat, diamond; one entry per gem). Everything else in the level table becomes a hidden target.
+
+Explicit mode (new gem set): `"rows"`, `"cols"`, `"targets": [{"name": "...", "size": [rows, cols]}]`, optional `"found_gems"` (same shape), `"excluded"`, `"allow_rotation": true`. Every target needs a `size`; the old `kind` shortcut was removed because its sizes were only right for one level.
+
+- Cells are 1-indexed `r<row>c<col>`, row 1 on top; `"r2c2:r3c7"` is a rectangle.
+- `dug`: every solid-black cell, empty dig or part of a found gem.
+- `hits`: revealed cells of a gem that is still hidden (purple sprite on black); the solver infers the rest of that gem.
 
 ## Rules confirmed by the user
 
-- Gems can always be rotated and can always touch each other. Do not ask again.
-- Gem sizes (corrected by the user after my wrong first guesses of tall 1x2 and flat 1x3): small diamond 1x1, tall crystal 3x1, flat crystal 2x1, hexagon 2x3, octagon 3x3. The artwork's pixel proportions do **not** match these, so never size a gem from its sprite; use this list and ask when a new shape appears.
-- Purple = still hidden. Any other colour (red octagon, blue hexagon, cyan flat, green diamond) = already found. The first session wrongly treated the red octagon as "not a target"; found gems are not targets but they do occupy cells.
+- Gems can always be rotated and always touch. Do not ask again.
+- Purple = hidden, any other colour = found (found gems are not targets but occupy cells).
 - Every layout consistent with the screen is equally likely.
+- Sizes come from `levels.json` or the user, never from the sprite's pixels.
 
 ## Heatmap design (user asked for readability fixes)
 
-- Solid cell colours, light-to-dark blue, and the number's colour chosen by luminance (dark text on light cells, white on dark). Fixed thresholds on translucent colours gave unreadable mid-tones.
-- 15px numbers on 7-column boards, 13px on 8 columns, column labels `c1..` on top, row labels `r1..` at the left.
-- Colour scale capped near the 90th percentile so a 94% cell does not wash out the 10-25% cells.
-- All tied best cells get the solid orange (#EF9F27) inset outline, near ties (under 0.5 point) a dashed one. Do not mark only the first cell of a tie.
-- Black cells are blank neutral squares (the label would only add noise), revealed gem parts amber with "gem". Include a one-line legend.
-- Use an `sr-only` heading as the text alternative.
+Solid light-to-dark blue cells with text colour chosen by luminance; scale capped near the 90th percentile; 15 px numbers up to 7 columns, 13 px at 8; `c1..`/`r1..` labels; every tied best cell has a solid orange (#EF9F27) inset outline, near ties (under 0.5 pt) dashed; dug cells blank, revealed gem parts amber "gem"; one-line legend; `sr-only` heading. `solve.py` implements all of this.
 
 ## Flag rather than guess
 
-- A gem shape or size not in the list above: ask, or run each candidate size and, if the best squares agree, say so (this worked for the hexagons: 2x2 and 2x3 gave the same best four squares).
-- Black cells that do not add up to the found gems plus plausible isolated misses.
-- Targets that cannot fit the board (the solver exits with an error). Treat it as a misreading.
+- Unknown level/gem set, black cells that do not add up, targets that cannot fit the board (solver exits): treat as a misreading, ask.
+- Top squares a fraction of a point apart: say near tie. A top cell that completes a partly revealed gem (about 94%) is "completes that gem"; after that dig the next-best unknown squares.
 
-## Output notes
+## Packaging
 
-- Top squares are often a fraction of a point apart; call it a near tie instead of a winner. With an empty board the best squares are just the geometric favourites; with a partly revealed gem the next end cell is about 94%.
-- When the top cell is a known extension of a partly revealed gem (for example r5c6 at 94%), say it completes that gem. After that, the next-best unknown squares are the ones to dig.
-- Packaging: the user normally wants code as tar.gz, but for this skill they explicitly asked for a zip plus a push to GitHub (`nadavcoh/jewl-gate-heatmap`, branch main). The current request wins.
+The user normally wants code files as tar.gz; for this skill they explicitly asked for a zip plus a push to `nadavcoh/jewl-gate-heatmap` (branch main). The current request wins.
