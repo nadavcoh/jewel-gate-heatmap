@@ -1,0 +1,16 @@
+{
+ "_note": "Level 1 (4x4), tall found at r2c1:r2c2.",
+ "level": 1,
+ "dug": [
+  "r2c1:r2c2"
+ ],
+ "found": [
+  "tall"
+ ],
+ "expect": {
+  "best": [
+   "r3c3"
+  ],
+  "percent": 75.0
+ }
+}

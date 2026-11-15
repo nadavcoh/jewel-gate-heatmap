@@ -1,25 +1,41 @@
-# Lessons from the sessions (read once; these are the user's corrections and my own findings)
+# Lessons (read once). Everything below was a correction from the user or a failure I hit while running the code.
 
-## The user's prompts and what they taught
-1. First request: `/jewl gate heatmap` with five screenshots (levels 1-5 in upload order, blank boards). I analyzed only the newest (8x8). **Correction: "The 8x8 is correct. Analyze all boards from the screenshots in this chat."** When several screenshots arrive, produce a result for every board, sorted by level, not just the latest. Uploaded file order was also time order (time remaining shrinks).
-2. **"There are no standard gem sizes, always write sizes."** I had assumed one size table (tall 3x1, octagon 3x3, ...) for all boards. Sizes differ per level (octagon is 2x2 on levels 1-3, 3x3 on 4-5; tall is 2x1 or 3x1; flat is 2x1 or 1x3). Always list gems with their sizes; never carry sizes between levels. Stored as a standing preference.
-3. Level 1 (4x4) gems given by the user: 1 x 2x2, 2 x 2x1, 2 x 1x1. With the old sizes the board was impossible (17 cells on 16), which was the first sign that sizes vary. A set of gems that cannot fit is a signal that sizes are wrong, not that the screenshot is.
-4. **"Don't you have boards from past runs in the skill?"** Yes: the skill's examples held the confirmed level 4 and 5 gem sets, and I had wrongly called them "assumed". Before saying sizes are unknown, check `levels/levels.json` and `examples/`.
-5. "The octagon in the 5x5 board is 2x2", then level 3: octagon 2x2, tall 2x1, flat 1x3, diamonds 1x1, and "5x5 tall/flat/diamond are the sizes you listed" (tall 3x1, flat 2x1, diamond 1x1). Answers to my size questions were short and specific; ask for the missing sizes of one board at a time, listing what I assume.
-6. **"Crop the gems from each screenshot and present them together with the detected gems so I can verify them again easily."** then **"Embed the crops inline, one crop next to one list."** Verification should be inline, one crop beside one gem list (not a separate PNG, not one big composite). `scripts/gem_crops.py` does this.
-7. "Yes" twice: the first confirmed the crops matched the lists; the second answered my offer of heatmaps for the other four boards. Treat a bare "Yes" as answering my last question, and when I offer the remaining boards' heatmaps and they say yes, deliver all of them in one widget.
-8. Final request: store the five boards as levels 1-5 (increasing size) with gem definitions and the blank heatmap, and on request for a level's map supply the gem definition with sizes and the heat map; update the skill with the lessons; push to GitHub main; also present a zip. Done as `levels/levels.json` + `scripts/level.py`.
+## Standing rules that came from the user's prompts
+1. **Analyze every screenshot** and give one result per board, sorted by level, not only the newest. (First session: "The 8x8 is correct. Analyze all boards from the screenshots in this chat.")
+2. **"There are no standard gem sizes, always write sizes."** Octagon is 2x2 on levels 1-3 and 3x3 on 4-5; tall is 2x1 or 3x1; flat is 2x1 or 1x3. List every gem as `count, class, size (rows x cols)`; never carry a size from another level. Before saying sizes are unknown, check `levels/levels.json` and `examples/`.
+3. **"Always show the crop with the found count."** Every board reply has the gem crop from that screenshot beside the gem list, with "k of N found" and sizes, inline (not a separate PNG, not one composite). (Earlier: "Crop the gems ... so I can verify", "Embed the crops inline, one crop next to one list".)
+4. **Always generate the heatmap.** After a board where all remaining squares were tied (25%) I answered in text; the user had to say "Make the heatmap". Tied, flat, zero pickaxes, only diamonds left: still draw it (flat boards get a uniform mid-blue; `solve.compact` handles it).
+5. **The crop must match the screenshot's colours.** "That crop doesn't match the latest screenshot": I had squeezed the crop to 8 colours and the green found diamond came out as a dull purple-grey, so it looked hidden. Colours are now the exact measured ones (below).
+6. **The crop data must not be garbled.** "The crop is broken" / "there are black squares instead of the crops": a base64 PNG I retyped into the widget had a changed character, so the whole image was black, twice. Once I even pasted the previous screenshot's string, so the octagon was not red. Fix: the crop is a run-length pixel map drawn on a canvas (errors stay local), `analyze.py` decodes it before writing `widget.html`, and you copy from `cat widget.html`, never from memory or an earlier message.
+7. **"Mark r3c5 as blank."** A cell that was dug (empty) in one screenshot was shown undug in the next, and I trusted the newer screenshot. The user knew it was an empty dig. Cells never un-dig: keep earlier dug cells (`analyze.py --prev`), tell the user about the discrepancy, and apply `--add-dug`/`--remove-dug` when they correct you. User corrections beat the reader.
+8. Short answers from the user are answers to my last question ("Yes" = confirm / deliver the rest). Level requests arrive as `/jewel gate level 1`, `Level 2`, `Level 3` = Workflow A. A bare screenshot = Workflow B.
+9. Code goes out as a **zip**, never tar.gz (saved preference), and is pushed to `nadavcoh/jewel-gate-heatmap` main when asked. (The old SKILL.md misspelled the repo as `jewl-gate-heatmap`.)
+10. Repeated by the user across sessions: sizes written out; crop next to list; one board at a time in the dig loop; short phone-friendly replies.
 
-## Findings from running code
-- `solve.py` logic (exact enumeration with rotation, touching allowed) needed no change; all blank maps sum to the gem-cell total. Blank-board numbers per level are in `levels/levels.json`.
-- The `kind` shortcut (diamond 1x1, tall 3x1, flat 1x2, hex 3x2, octagon 3x3) silently produced wrong sizes for levels 1-3. Removed; every target needs `size`, or use `{"level": N}`.
-- The old heatmap fragment is ~16 KB of repeated inline styles, too long to paste into the inline visual tool reliably. `heatmap_compact.html` (~2 KB, JS-driven, checked under node) replaces it for inline use.
-- Grid detection by black-pixel projection (y 1110-2090, threshold 300 px, merge lines closer than 6 px) gave exactly lines = cells + 1 on all five levels. It replaces counting crossings by eye (an earlier session guessed 6x6 for a 7x7 board).
-- Sprite detection needs a minimum area (600 px) and shape rules: without it, dither noise produced ~60 fake diamonds per image. A 17x82 blob is decoration.
-- Level 3 (6x6) blank map is almost flat (12 squares within 0.5 pt), so a "best square" there is a near tie; say so.
-- Level 1 sizes sum to 10 cells; ties r2c2 r2c3 r3c2 r3c3 at 72.87%. Level 2 has a single clear best square r3c3 (60.84%).
-- Shell brace expansion in the tool did not expand (`IMG_30{34,42}.png`); list file names explicitly.
-- Pickaxe counters seen on the blank boards: L1 0, L2 3, L3 1, L4 2, L5 4. At 0 the user cannot dig (L1 button says PLAY).
+## The auto reader: what was wrong and how it was fixed
+- Symptoms on real boards: IMG_3205 read as 3x4 with no dug cells, IMG_3206 as 2x2, IMG_3217 as 7x6. I fell back to reading by eye every time.
+- Cause: the old reader counted grid lines by projecting black pixels. A dug block is black, so it adds hundreds of black pixels to every column/row it spans; peaks merged or shifted. It only worked on blank boards.
+- Fix (`scripts/screen.py`): level = green check marks in the progress bar + 1 (green pixels in 90x75 boxes at x 242/404/566/728, y 825-900, threshold 300; a check has ~1290 pixels, none = 0). Grid lines are then fixed per level (`GEOM`), cells sampled in the inner half; dark fraction above 0.8 = dug. Verified on 14 screenshots (levels 1-3), all matching my by-eye reads.
+- Sprite detection: label non-black pixels in x 425-705, y 440-740 (the decoration blobs at x 383-404 and 721-742 are outside), area >= 600, classify by bounding box. State comes from the dominant colour: hidden = (214,0,255); anything else is found. The violet tall (173,84,255) of level 2 was missed before because the old mask called it "magenta".
+- Tall area can reach 3875 px (3-cell), so the tall/flat area limit is 4100, not 4000.
+- Consistency check printed by the reader and solver: black cells - found-gem cells = empty digs, must be >= 0 and matched my reading every time.
+- Levels 4-5: geometry comes from blank boards only; verify the first real board of those levels.
+
+## Colours and crops (measured)
+- Hidden sprites (214,0,255). Found: red octagon (255,0,111), teal tall (0,255,210) on levels 1 and 3, violet tall (173,84,255) on level 2, green diamond (0,255,4). A found sprite is simply not magenta; do not classify found gems by colour.
+- Crop box (415,470)-(711,726), widened to cover all sprites; 4x4 blocks, a block is coloured when >= 6 of its 16 pixels are non-black, nearest exact palette colour. 74x64 blocks, about 1.3 KB of RLE, 4 KB for the whole widget. A base64 PNG was 1.1-1.7 KB of random characters and failed twice.
+- `view crop_preview.png` after every run; it is decoded from the RLE string itself.
+
+## Solver and widget findings
+- `solve.py` (exact enumeration, rotation and touching allowed) needed no change; all blank maps sum to the gem-cell total.
+- The `kind` shortcut for gem sizes was removed earlier (it gave wrong sizes for levels 1-3). Every target needs `size`, or use `{"level": N}`.
+- `heatmap_fragment.html` (~16 KB) is too long to paste; the compact JS widget (~2 KB) is used. A flat board (all squares tied) used to render almost white; now uniform mid-blue.
+- Digging a gem cell reveals the whole gem (all cells turn black, sprite changes colour). Observed on every found gem. So `hits` (partially revealed hidden gem) never occurred.
+- Pickaxes per dig: 1. The counter is not read by the script (pixel digits); read it by eye and say "0 = they must earn some" (button then says PLAY instead of RANDOM).
+- Time remaining shrinks across screenshots, which orders them.
+
+## Session log (what the boards looked like, for regression)
+Level 1: tall found at r2c1:r2c2 -> best r3c3 75.00%; octagon + tall found -> 25% everywhere (two diamonds left, 8 squares tied). Level 2: two empty digs -> best r2c4/r4c2 70.57%; diamond found -> r2c2/r4c2 76.95%; octagon found -> r3c5/r5c3 80%; tall found -> r3c5 70.37%; after r3c5 empty and both talls found -> r3c1/r4c1/r5c1 50.00%. Level 3: r2c2,r2c5 empty -> r5c2/r5c5 49.76%; tall found r5c5:r5c6 -> r5c2 51.36%; octagon found r4c2:r5c3 -> r3c4 39.22%. The same boards are in `examples/` and `tests/`.
 
 ## Reply style that worked
-Short, mobile-friendly: a table of gems with sizes (count, gem, size), a table of best squares per board with unrounded percentages, ties called ties, and one closing question asking the user to confirm or give the missing sizes.
+Short: widget (crop with found count + heatmap), gem table with sizes, best-squares table with unrounded percentages and ties called ties, pickaxe count, one question ("Does this match your screen?"). Say plainly when the reader and the image disagree.

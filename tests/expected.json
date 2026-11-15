@@ -1,0 +1,9 @@
+{
+  "_note": "Expected reader output for the fixtures (verified by eye in the session). dug/found/hidden are what read_board must return.",
+  "IMG_3205.PNG": {"level": 1, "dug": ["r2c1", "r2c2"], "found": ["tall"], "empty_digs": 0},
+  "IMG_3207.PNG": {"level": 1, "dug": ["r2c1","r2c2","r2c3","r2c4","r3c2","r3c3","r3c4","r4c2"], "found": ["octagon","tall","tall"], "empty_digs": 0},
+  "IMG_3210.PNG": {"level": 2, "dug": ["r2c4","r3c3","r4c4"], "found": ["diamond"], "empty_digs": 2},
+  "IMG_3215.PNG": {"level": 2, "dug": ["r1c1","r1c2","r1c3","r1c4","r1c5","r2c1","r2c2","r2c4","r3c3","r4c2","r4c4","r5c3","r5c4","r5c5"], "found": ["diamond","octagon","tall","tall"], "empty_digs": 3, "best": ["r3c5"], "best_percent": 42.86},
+  "IMG_3217.PNG": {"level": 3, "dug": ["r2c2", "r2c5"], "found": [], "empty_digs": 2, "best": ["r5c2", "r5c5"], "best_percent": 49.76},
+  "IMG_3225.PNG": {"level": 3, "dug": ["r2c2","r2c5","r4c2","r4c3","r5c2","r5c3","r5c5","r5c6"], "found": ["octagon","tall"], "empty_digs": 2, "best": ["r3c4"], "best_percent": 39.22}
+}

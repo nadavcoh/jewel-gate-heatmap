@@ -295,7 +295,7 @@ def compact(spec, prob, dug, hits, cand, title=""):
         "const b='aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;';"
         "if(v==-1){h+='<div style=\"'+b+'background:var(--surface-1);border:0.5px solid var(--border);\"></div>';return;}"
         "if(v==-2){h+='<div style=\"'+b+'font:500 12px system-ui,sans-serif;background:#EF9F27;color:#412402;\">gem</div>';return;}"
-        "const t=Math.min(1,Math.max(0,(v-lo)/(hi-lo))),R=Math.round(230-218*t),Gc=Math.round(241-173*t),Bc=Math.round(251-127*t);"
+        "const t=hi-lo<0.5?0.6:Math.min(1,Math.max(0,(v-lo)/(hi-lo))),R=Math.round(230-218*t),Gc=Math.round(241-173*t),Bc=Math.round(251-127*t);"
         "const lum=(0.299*R+0.587*Gc+0.114*Bc)/255,o=has(B,r,c)?'outline:3px solid #EF9F27;outline-offset:-3px;':has(N,r,c)?'outline:2px dashed #EF9F27;outline-offset:-2px;':'';"
         "h+='<div style=\"'+b+'font:500 '+fs+'px system-ui,sans-serif;background:rgb('+R+','+Gc+','+Bc+');color:'+(lum>0.62?'#042C53':'#FFFFFF')+';'+o+'\">'+v+'%</div>';});});"
         "document.getElementById('w').innerHTML=h+'</div>';"

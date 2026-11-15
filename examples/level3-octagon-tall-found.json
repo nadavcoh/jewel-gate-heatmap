@@ -1,0 +1,20 @@
+{
+ "_note": "Level 3 (6x6), octagon at r4c2:r5c3 and tall at r5c5:r5c6 found.",
+ "level": 3,
+ "dug": [
+  "r2c2",
+  "r2c5",
+  "r4c2:r5c3",
+  "r5c5:r5c6"
+ ],
+ "found": [
+  "octagon",
+  "tall"
+ ],
+ "expect": {
+  "best": [
+   "r3c4"
+  ],
+  "percent": 39.22
+ }
+}

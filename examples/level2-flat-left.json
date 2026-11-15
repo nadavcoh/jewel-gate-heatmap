@@ -1,0 +1,29 @@
+{
+ "_note": "Level 2 (5x5), 4 of 5 found (octagon, diamond, both talls), r3c5 marked blank by the user. Only the flat 2x1 is hidden.",
+ "level": 2,
+ "dug": [
+  "r1c1:r1c5",
+  "r2c1",
+  "r2c2",
+  "r2c4",
+  "r3c3",
+  "r3c5",
+  "r4c2",
+  "r4c4",
+  "r5c3:r5c5"
+ ],
+ "found": [
+  "octagon",
+  "diamond",
+  "tall",
+  "tall"
+ ],
+ "expect": {
+  "best": [
+   "r3c1",
+   "r4c1",
+   "r5c1"
+  ],
+  "percent": 50.0
+ }
+}

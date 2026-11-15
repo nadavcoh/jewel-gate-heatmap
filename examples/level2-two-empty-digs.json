@@ -1,0 +1,16 @@
+{
+ "_note": "Level 2 (5x5), r3c3 and r4c4 dug and empty.",
+ "level": 2,
+ "dug": [
+  "r3c3",
+  "r4c4"
+ ],
+ "found": [],
+ "expect": {
+  "best": [
+   "r2c4",
+   "r4c2"
+  ],
+  "percent": 70.57
+ }
+}
