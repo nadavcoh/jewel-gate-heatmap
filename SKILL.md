@@ -83,3 +83,5 @@ Unknown level or gem set, `K < 0`, sprites that do not match the level table, a 
 ## Testing and packaging
 
 Run `python3 scripts/selftest.py` after any change (reader on `tests/fixtures`, solver on `examples/`, crop colours and widget contents). Deliver code as a **zip** (never tar.gz) and push to `nadavcoh/jewel-gate-heatmap` branch `main` when asked; the current request wins.
+
+Keep `README.md`, `CLAUDE.md`, this file and `references/` in sync with the code in the same commit (CLAUDE.md lists the rules for changing the repo).

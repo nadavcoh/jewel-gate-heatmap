@@ -10,7 +10,8 @@
 7. **"Mark r3c5 as blank."** A cell that was dug (empty) in one screenshot was shown undug in the next, and I trusted the newer screenshot. The user knew it was an empty dig. Cells never un-dig: keep earlier dug cells (`analyze.py --prev`), tell the user about the discrepancy, and apply `--add-dug`/`--remove-dug` when they correct you. User corrections beat the reader.
 8. Short answers from the user are answers to my last question ("Yes" = confirm / deliver the rest). Level requests arrive as `/jewel gate level 1`, `Level 2`, `Level 3` = Workflow A. A bare screenshot = Workflow B.
 9. Code goes out as a **zip**, never tar.gz (saved preference), and is pushed to `nadavcoh/jewel-gate-heatmap` main when asked. (The old SKILL.md misspelled the repo as `jewl-gate-heatmap`.)
-10. Repeated by the user across sessions: sizes written out; crop next to list; one board at a time in the dig loop; short phone-friendly replies.
+10. Every repo edited in a session must have an up-to-date `README.md` and `CLAUDE.md` (add them if missing) and updated docs; this repo now has both.
+11. Repeated by the user across sessions: sizes written out; crop next to list; one board at a time in the dig loop; short phone-friendly replies.
 
 ## The auto reader: what was wrong and how it was fixed
 - Symptoms on real boards: IMG_3205 read as 3x4 with no dug cells, IMG_3206 as 2x2, IMG_3217 as 7x6. I fell back to reading by eye every time.
