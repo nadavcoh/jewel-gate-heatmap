@@ -26,7 +26,7 @@ python3 scripts/analyze.py /mnt/user-data/uploads/IMG.png --outdir out_N [--prev
 
 It reads the level (green check marks + 1), the dug cells, hits and sprite states, runs the exact solver, prints the validation report and writes `out_N/widget.html`, `crop_preview.png`, `reply.md`, `spec.json`, `result.json`.
 
-1. **Check the printed grid, sprite list and `Black cells - found-gem cells = K empty digs`** against the image by eye (K must be >= 0). The reader is verified on 14 real screenshots (levels 1-3); levels 4-5 only on blank boards. A wrong read silently gives a wrong map.
+1. **Check the printed grid, sprite list and `Black cells - found-gem cells = K empty digs`** against the image by eye (K must be >= 0). The reader is verified on 19 real screenshots (levels 1-5, `tests/`), including a partly revealed gem (`H` in the grid). A wrong read silently gives a wrong map.
 2. **`view out_N/crop_preview.png`** and compare its colours with the screenshot's gem artwork (found gems coloured, hidden ones magenta).
 3. **Paste `out_N/widget.html` into the inline visual tool verbatim** (call its `read_me` first, `data_viz` module, mobile). `cat` the file right before pasting and copy it from that output. Do not retype, shorten, reflow or reuse an older string: one wrong character in the crop string garbles the picture (this happened twice, see lessons). If the widget renders black or broken, regenerate and paste again; if it still fails, send `crop_preview.png` with `present_files`.
 4. **Reply from `reply.md`** (short, phone): gem table with sizes, best-squares table, pickaxe count read by eye (0 = they must earn some before digging), the question.
@@ -57,14 +57,14 @@ For a gem set not in the table, ask the user for the sizes (one board at a time,
 
 - Digging any cell of a gem reveals the **whole gem**: all its cells turn black at once and its sprite in the artwork changes from magenta to the gem's own colour. So a black block the shape of a gem plus a recoloured sprite = that gem found. Black cells that belong to no found gem are empty digs.
 - `Black cells - found-gem cells = empty digs` is the consistency check printed by the solver and the reader.
-- Hidden sprite colour is always (214,0,255). Found colours seen: red octagon, green diamond, teal tall (levels 1 and 3), violet tall (level 2). Any non-magenta sprite is found.
+- Hidden sprite colour is always (214,0,255). Found colours seen: red octagon, green diamond, teal tall (levels 1 and 3), violet tall (level 2), teal flat and blue hexagon (levels 4-5). Any non-magenta sprite is found.
 
 ## Spec format (for `solve.py`; analyze.py writes it for you)
 
 ```json
 {"level": 3, "dug": ["r2c2", "r4c2:r5c3"], "hits": [], "found": ["octagon", "tall"]}
 ```
-`found` lists the found gems' classes, one entry per gem. Cells are 1-indexed `r<row>c<col>`; `"r2c2:r3c7"` is a rectangle. `dug` = every solid-black cell; `hits` = revealed cells of a still-hidden gem (never seen in practice, since a dig reveals the whole gem). Explicit mode for a new gem set: `"rows"`, `"cols"`, `"targets": [{"name":..,"size":[r,c]}]`, optional `"found_gems"`. Every target needs a `size`.
+`found` lists the found gems' classes, one entry per gem. Cells are 1-indexed `r<row>c<col>`; `"r2c2:r3c7"` is a rectangle. `dug` = every solid-black cell; `hits` = revealed cells of a still-hidden gem (seen on level 4: a tall crystal drawn in violet on two black cells, third cell still yellow; the solver then puts about 94% on the missing end cell). Explicit mode for a new gem set: `"rows"`, `"cols"`, `"targets": [{"name":..,"size":[r,c]}]`, optional `"found_gems"`. Every target needs a `size`.
 
 ## Rules confirmed by the user
 

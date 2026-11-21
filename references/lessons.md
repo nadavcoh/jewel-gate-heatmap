@@ -11,7 +11,9 @@
 8. Short answers from the user are answers to my last question ("Yes" = confirm / deliver the rest). Level requests arrive as `/jewel gate level 1`, `Level 2`, `Level 3` = Workflow A. A bare screenshot = Workflow B.
 9. Code goes out as a **zip**, never tar.gz (saved preference), and is pushed to `nadavcoh/jewel-gate-heatmap` main when asked. (The old SKILL.md misspelled the repo as `jewl-gate-heatmap`.)
 10. Every repo edited in a session must have an up-to-date `README.md` and `CLAUDE.md` (add them if missing) and updated docs; this repo now has both.
-11. Repeated by the user across sessions: sizes written out; crop next to list; one board at a time in the dig loop; short phone-friendly replies.
+11. Rules and corrections from the level 4-5 session: the user corrected my first sizes (tall 3x1 not 1x2, flat 2x1 not 1x3, octagon 3x3, hexagon 2x3); purple = hidden, any other colour = found (I had wrongly left the red octagon out as a non-target); "rotation and touching are always allowed"; "some of the text on the heatmap is hard to read" (fixed: text colour by luminance on solid cells, capped colour scale, every tied cell outlined). When a gem shape is new, ask for its size (or run the candidate sizes; if the best squares agree, say so).
+12. Repo and connector: the repo is `nadavcoh/jewel-gate-heatmap` (old name `jewl-gate-heatmap` redirects). `gh-push-mcp` is write-only (commit_files, create_branch) and returned "Not Found" several times before working; retry or reconnect. The sandbox can `git clone` the public repo to read it (I wrongly said I could not see it). Clone first and work from the clone; do not rebuild files from a stale copy.
+13. Repeated by the user across sessions: sizes written out; crop next to list; one board at a time in the dig loop; short phone-friendly replies.
 
 ## The auto reader: what was wrong and how it was fixed
 - Symptoms on real boards: IMG_3205 read as 3x4 with no dug cells, IMG_3206 as 2x2, IMG_3217 as 7x6. I fell back to reading by eye every time.
@@ -31,12 +33,12 @@
 - `solve.py` (exact enumeration, rotation and touching allowed) needed no change; all blank maps sum to the gem-cell total.
 - The `kind` shortcut for gem sizes was removed earlier (it gave wrong sizes for levels 1-3). Every target needs `size`, or use `{"level": N}`.
 - `heatmap_fragment.html` (~16 KB) is too long to paste; the compact JS widget (~2 KB) is used. A flat board (all squares tied) used to render almost white; now uniform mid-blue.
-- Digging a gem cell reveals the whole gem (all cells turn black, sprite changes colour). Observed on every found gem. So `hits` (partially revealed hidden gem) never occurred.
+- Digging a gem cell usually reveals the whole gem (all cells turn black, sprite changes colour), but **not always**: on level 4 (IMG_2820) a tall crystal showed on two black cells with its third cell still yellow and its artwork sprite still magenta. That is a `hit`. The reader missed it at first because it only looked for magenta (G < 80) and the sprite is violet (173,84,255); fixed (`pur` test in `screen.read_cells`), covered by `tests/fixtures/IMG_2820.PNG`.
 - Pickaxes per dig: 1. The counter is not read by the script (pixel digits); read it by eye and say "0 = they must earn some" (button then says PLAY instead of RANDOM).
 - Time remaining shrinks across screenshots, which orders them.
 
 ## Session log (what the boards looked like, for regression)
-Level 1: tall found at r2c1:r2c2 -> best r3c3 75.00%; octagon + tall found -> 25% everywhere (two diamonds left, 8 squares tied). Level 2: two empty digs -> best r2c4/r4c2 70.57%; diamond found -> r2c2/r4c2 76.95%; octagon found -> r3c5/r5c3 80%; tall found -> r3c5 70.37%; after r3c5 empty and both talls found -> r3c1/r4c1/r5c1 50.00%. Level 3: r2c2,r2c5 empty -> r5c2/r5c5 49.76%; tall found r5c5:r5c6 -> r5c2 51.36%; octagon found r4c2:r5c3 -> r3c4 39.22%. The same boards are in `examples/` and `tests/`.
+Level 1: tall found at r2c1:r2c2 -> best r3c3 75.00%; octagon + tall found -> 25% everywhere (two diamonds left, 8 squares tied). Level 2: two empty digs -> best r2c4/r4c2 70.57%; diamond found -> r2c2/r4c2 76.95%; octagon found -> r3c5/r5c3 80%; tall found -> r3c5 70.37%; after r3c5 empty and both talls found -> r3c1/r4c1/r5c1 50.00%. Level 3: r2c2,r2c5 empty -> r5c2/r5c5 49.76%; tall found r5c5:r5c6 -> r5c2 51.36%; octagon found r4c2:r5c3 -> r3c4 39.22%. Level 4 (7x7): blank -> r3c3/r3c5/r5c3/r5c5 54.83%; octagon found (r3c3:r5c5) -> r2c2/r2c6/r6c2/r6c6 32.54%; flat found r2c2:r3c2, empty r2c6/r6c2/r6c6, tall hit r3c6+r4c6 -> r5c6 93.97%. Level 5 (8x8): blank -> r3c3/r3c6/r6c3/r6c6 59.21%; octagon, 2 hexagons, top flat and one diamond found, 4 empty digs (r5c2, r5c4, r6c3, r7c2) -> r7c4 18.42%. Fixtures: IMG_2775, 2781, 2820 (level 4), IMG_2821, 2822 (level 5). The same boards are in `examples/` and `tests/`.
 
 ## Reply style that worked
 Short: widget (crop with found count + heatmap), gem table with sizes, best-squares table with unrounded percentages and ties called ties, pickaxe count, one question ("Does this match your screen?"). Say plainly when the reader and the image disagree.

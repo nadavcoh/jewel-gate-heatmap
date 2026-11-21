@@ -20,6 +20,7 @@ for f, e in exp.items():
     r = screen.read(p)
     check(f"{f} level", r["level"] == e["level"], str(r["level"]))
     check(f"{f} dug", sorted(r["dug"]) == sorted(e["dug"]), str(r["dug"]))
+    check(f"{f} hits", sorted(r.get("hits", [])) == sorted(e.get("hits", [])), str(r.get("hits")))
     check(f"{f} found sprites", r["found"] == sorted(e["found"]), str(r["found"]))
     check(f"{f} sprites match level table", r["sprites_match_level"])
     check(f"{f} empty digs", r["empty_digs"] == e["empty_digs"], str(r["empty_digs"]))

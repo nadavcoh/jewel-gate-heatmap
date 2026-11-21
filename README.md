@@ -42,7 +42,7 @@ python3 scripts/selftest.py
 ## How it works
 
 1. **Read** (`scripts/screen.py`): level = green check marks in the progress bar + 1; grid lines are fixed per level; a cell is dug when it is solid black;
-   a sprite in the artwork is hidden when it is magenta (214,0,255) and found otherwise. Verified on 14 real screenshots of levels 1-3.
+   a sprite in the artwork is hidden when it is magenta (214,0,255) and found otherwise. Verified on 19 real screenshots (levels 1-5); a purple or violet sprite on black cells is read as a `hit` (revealed part of a still-hidden gem).
 2. **Solve** (`scripts/solve.py`): exact enumeration of every layout consistent with the screen (gems may rotate and touch; every layout equally likely).
 3. **Show** (`scripts/widget.py`, `solve.compact`): the crop is a run-length pixel map drawn on a canvas (a base64 image corrupted when retyped), the gem list uses `levels/levels.json`, the heatmap is a small JS grid.
 
@@ -73,7 +73,7 @@ Level = check marks + 1. Sizes are rows x cols and always rotatable. There are n
 
 ## Limits
 
-- Reader verified on levels 1-3; levels 4-5 geometry comes from blank boards only.
+- Reader verified on all five levels (`tests/fixtures`); levels 4-5 have only a few real boards, so check the grid the script prints against the screenshot.
 - The pickaxe counter is not read by the script (read it by eye).
 - A screenshot taken with a different phone or layout needs new geometry in `screen.GEOM`.
 

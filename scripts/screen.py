@@ -29,8 +29,8 @@ CHECK_X = (242, 404, 566, 728)           # progress-bar slots, check mark = gree
 HIDDEN = (214, 0, 255)
 ART = (425, 440, 705, 740)               # x0, y0, x1, y1 of the gem artwork (decoration blobs sit outside it)
 CROP = (415, 470, 711, 726)              # default crop, 296x256 = 74x64 blocks of 4 px
-NAMES = {(0, 255, 210): "teal", (255, 0, 111): "red", (0, 255, 4): "green", (173, 84, 255): "violet", HIDDEN: "magenta"}
-LETTERS = {HIDDEN: "M", (173, 84, 255): "V", (0, 255, 210): "T", (255, 0, 111): "R", (0, 255, 4): "G"}
+NAMES = {(0, 255, 210): "teal", (255, 0, 111): "red", (0, 255, 4): "green", (173, 84, 255): "violet", (19, 147, 255): "blue", HIDDEN: "magenta"}
+LETTERS = {HIDDEN: "M", (173, 84, 255): "V", (0, 255, 210): "T", (255, 0, 111): "R", (0, 255, 4): "G", (19, 147, 255): "B"}
 SPARE = list("ABCDEFHIJLNOPQSUWXYZ")
 
 def load(path):
@@ -59,10 +59,10 @@ def read_cells(a, level):
             mx, my = (xs[c + 1] - xs[c]) // 4, (ys[r + 1] - ys[r]) // 4
             cell = a[ys[r] + my:ys[r + 1] - my, xs[c] + mx:xs[c + 1] - mx].astype(int)
             dark = (cell.sum(axis=2) < 120).mean()
-            pur = ((cell[:, :, 0] > 150) & (cell[:, :, 2] > 200) & (cell[:, :, 1] < 80)).mean()
+            pur = ((cell[:, :, 0] > 140) & (cell[:, :, 2] > 200) & (cell[:, :, 1] < 140)).mean()   # magenta (214,0,255) and the violet (173,84,255) a partly revealed tall shows on black
             lab = f"r{r+1}c{c+1}"
             if pur > 0.08 and dark + pur > 0.8:
-                hits.append(lab)             # purple sprite on black = revealed part of a hidden gem (never seen yet)
+                hits.append(lab)             # purple/violet sprite on black = revealed part of a still-hidden gem (seen on level 4: tall crystal, 2 of 3 cells dug)
             elif dark > 0.8:
                 dug.append(lab)
     return dug, hits

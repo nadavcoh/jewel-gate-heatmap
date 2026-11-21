@@ -22,11 +22,14 @@ Cell column = floor((x - first x line) / cell), row likewise. Never eyeball-coun
 - Solid black blocks are revealed cells, empty dig or part of a found gem, and blocks can be irregular. Map each block to cells row by row.
 - A found gem leaves a plain black block (a found octagon = black square). Check: black cells - found-gem cells = empty digs (put found gems in `found`; the solver reports it).
 
-## Revealed parts of hidden gems (`hits`)
+## Revealed parts of hidden gems (`hits`) - seen on level 4 (IMG_2820)
+- A partly revealed tall crystal: two black cells (r3c6, r4c6) with the crystal drawn in violet (173,84,255) on them, the third cell (r5c6) still yellow, and the sprite in the artwork still magenta (hidden). The sprite covers part of each cell, so the dark fraction is only ~0.7 and ~0.25; the reader counts purple/violet pixels too (`dark + purple > 0.8`).
+
+### Older note (`hits`)
 - A purple sprite drawn on black cells is a hit on a still-hidden gem; its other cells are still yellow. Its top edge shows where it starts. An empty dig next to a hit rules out that end.
 
 ## Gems in the artwork
-- Magenta (214,0,255) = hidden. Any other colour = found. Seen on real boards: red octagon (255,0,111), teal tall (0,255,210) on levels 1 and 3, violet tall (173,84,255) on level 2, green diamond (0,255,4). Hexagon/flat found colours of levels 4-5 not seen yet.
+- Magenta (214,0,255) = hidden. Any other colour = found. Seen on real boards: red octagon (255,0,111), teal tall (0,255,210) on levels 1 and 3, violet tall (173,84,255) on level 2, green diamond (0,255,4). Seen on levels 4-5: teal flat (0,255,210), blue hexagon (19,147,255), green diamond, red octagon.
 - Digging one cell of a gem reveals the whole gem: all its cells go black and the sprite changes colour.
 - Sprite bounding boxes on blank boards (px): octagon ~101x101 (area ~8.6k, same for 2x2 and 3x3, so sprite size says nothing about cells), diamond ~39x39 (area ~790), hexagon ~54-64 x 104 (area ~4.2k), tall w30 x h100-136, flat h30 x w101-133. Tall/flat length was ~101 px for 2-cell and ~134 px for 3-cell gems on levels 1-4, a useful sanity check but not a source of sizes.
 - A 17x82 magenta blob and many tiny dither blobs are decoration; `read_board.py` filters by area and shape.
